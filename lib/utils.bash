@@ -18,11 +18,39 @@ sort_versions() {
     LC_ALL=C sort -t. -k 1,1 -k 2,2n -k 3,3n -k 4,4n -k 5,5n | awk '{print $2}'
 }
 
+version_weight () {
+  echo -e "$1" | tr ' ' "\n"  | sed -e 's:\+.*$::' | sed -e 's:^v::' | \
+    sed -re 's:^[0-9]+(\.[0-9]+)+$:&-stable:' | \
+    sed -re 's:([^A-Za-z])dev\.?([^A-Za-z]|$):\1.10.\2:g' | \
+    sed -re 's:([^A-Za-z])(alpha|a)\.?([^A-Za-z]|$):\1.20.\3:g' | \
+    sed -re 's:([^A-Za-z])(beta|b)\.?([^A-Za-z]|$):\1.30.\3:g' | \
+    sed -re 's:([^A-Za-z])(rc|RC)\.?([^A-Za-z]|$)?:\1.40.\3:g' | \
+    sed -re 's:([^A-Za-z])stable\.?([^A-Za-z]|$):\1.50.\2:g' | \
+    sed -re 's:([^A-Za-z])pl\.?([^A-Za-z]|$):\1.60.\2:g' | \
+    sed -re 's:([^A-Za-z])(patch|p)\.?([^A-Za-z]|$):\1.70.\3:g' | \
+    sed -r 's:\.{2,}:.:' | \
+    sed -r 's:\.$::' | \
+    sed -r 's:-\.:.:'
+}
+
 list_all_versions() {
-  curl "${curl_opts[@]}" 'https://s3-us-west-2.amazonaws.com/crossplane.releases?delimiter=/&prefix=stable/' |
-    grep -Eo 'v[0-9]+\.[0-9]+\.[0-9]+' |
-    sed 's/v//g' |
-    sort -t "." -k1,1n -k2,2n -k3,3n
+  local versions_list tags_orig tags_weight keys ix
+
+  versions_list=$(curl "${curl_opts[@]}" 'https://s3-us-west-2.amazonaws.com/crossplane.releases?delimiter=/&prefix=stable/' |
+  grep -Eo 'v[0-9]+\.[0-9]+\.[0-9]+(-[A-Za-z.0-9]+)?' |
+  sed 's/v//g')
+
+
+  mapfile -t tags_orig <<< "${versions_list}"
+  mapfile -t tags_weight <<< "$(version_weight "${tags_orig[*]}")"
+
+  keys=$(for ix in ${!tags_weight[*]}; do
+      printf "%s+%s\n" "${tags_weight[${ix}]}" "${ix}"
+  done | sort -V | cut -d+ -f2)
+
+  for ix in ${keys}; do
+      printf "%s\n" "${tags_orig[${ix}]}"
+  done
 }
 
 detect_system() {
