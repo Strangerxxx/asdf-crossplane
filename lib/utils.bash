@@ -3,8 +3,8 @@
 set -euo pipefail
 
 RELEASES="https://releases.crossplane.io"
-TOOL_NAME="crossplane-cli"
-EXECUTABLE_NAME="kubectl-crossplane"
+TOOL_NAME="crossplane"
+EXECUTABLE_NAME="crossplane"
 
 fail() {
   echo -e "asdf-$TOOL_NAME: $*"
@@ -20,8 +20,9 @@ sort_versions() {
 
 list_all_versions() {
   curl "${curl_opts[@]}" 'https://s3-us-west-2.amazonaws.com/crossplane.releases?delimiter=/&prefix=stable/' |
-    grep -Eo 'v[0-9]+\.[0-9]\.[0-9]+' |
-    sed 's/v//g'
+    grep -Eo 'v[0-9]+\.[0-9]+\.[0-9]+' |
+    sed 's/v//g' |
+    sort -t "." -k1,1n -k2,2n -k3,3n
 }
 
 detect_system() {
@@ -46,7 +47,7 @@ download_release() {
   platform="$2"
   filename="$3"
 
-  url="$RELEASES/stable/v${version}/bin/${platform}/crank"
+  url="$RELEASES/stable/v${version}/bin/${platform}/$TOOL_NAME"
 
   echo "* Downloading $TOOL_NAME release $version..."
   curl "${curl_opts[@]}" -o "$filename" -C - "$url" || fail "Could not download $url"
