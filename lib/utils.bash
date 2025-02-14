@@ -3,7 +3,7 @@
 set -euo pipefail
 
 RELEASES="https://releases.crossplane.io"
-TOOL_NAME="crossplane"
+TOOL_NAME="crank"
 EXECUTABLE_NAME="crossplane"
 
 fail() {
